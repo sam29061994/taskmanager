@@ -1,23 +1,18 @@
 import * as mangoose from 'mongoose';
-import {Prop, Schema, SchemaFactory} from '@nestjs/mongoose';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
 export type TaskDocument = Task & mangoose.Document;
 
-@Schema() 
+@Schema()
 export class Task {
-  @Prop({required:true})
+  @Prop({ required: true })
   title: string;
 
-  @Prop({required:true})
-  description:string;
+  @Prop({ required: true })
+  completed: boolean;
 
-  @Prop({required:true})
-  status: TaskStatus
+  @Prop({ default: Date.now() })
+  createdAt: Date;
 }
 
 export const TaskSchema = SchemaFactory.createForClass(Task);
-
-export enum TaskStatus {
-  OPEN = 'OPEN',
-  DONE='DONE'
-}

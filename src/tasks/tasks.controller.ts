@@ -1,82 +1,96 @@
-import { Controller, Get, Post, Query, Delete, Body, Param, Patch, UsePipes, ValidationPipe } from "@nestjs/common";
-import { CreateTaskDTO } from "./dto/create-task.dto";
-import { GetTaskFilterDTO } from "./dto/get-task-filter.dto";
-import { TaskStatusValidationPipe } from "./pipes/task-status-validation.pipe";
-import { TaskStatus, Task, TaskDocument } from "./task.model";
+import {
+  Controller,
+  Get,
+  Post,
+  Query,
+  Delete,
+  Body,
+  Param,
+  Patch,
+  UsePipes,
+  ValidationPipe,
+  UseGuards,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { CreateTaskDto } from './dto/create-task.dto';
+import { GetTaskFilterDto } from './dto/get-task-filter.dto';
+import { SelectAllTasks } from './dto/select-all-tasks.dto';
+import { UpdateTaskDto } from './dto/update-task.dto';
+import { TaskDocument } from './task.model';
 import { TasksService } from './tasks.service';
 
 @Controller('tasks')
+@UseGuards(AuthGuard())
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) { }
+  constructor(private readonly tasksService: TasksService) {}
 
   @Post()
   @UsePipes(ValidationPipe)
-  async createTask(
-    @Body() createTaskDTO: CreateTaskDTO
-  ) {
-    const generatedId = await this.tasksService.createTask(createTaskDTO);
-    return { id: generatedId };
+  async createTask(@Body() createTaskDTO: CreateTaskDto) {
+    const result = await this.tasksService.createTask(createTaskDTO);
+    const { _id: id, title, completed, createdAt } = result;
+
+    return { id, title, completed, createdAt };
   }
 
   @Get()
-  async getTasks(@Query(ValidationPipe) getTaskFilterDTO: GetTaskFilterDTO) {
+  async getTasks(@Query(ValidationPipe) getTaskFilterDTO: GetTaskFilterDto) {
     let tasks: TaskDocument[] = [];
     if (Object.keys(getTaskFilterDTO).length > 0) {
       tasks = await this.tasksService.getTasksWithFilters(getTaskFilterDTO);
     } else {
-
       tasks = await this.tasksService.getTasks();
     }
-    return tasks.map(task => ({
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      status: task.status
+
+    return tasks.map(({ id, title, completed, createdAt }) => ({
+      id,
+      title,
+      completed,
+      createdAt,
     }));
   }
 
   @Get('/:id')
-  async getTask(
-    @Param('id') id: string
-  ) {
+  async getTask(@Param('id') id: string) {
     const task = await this.tasksService.getTask(id);
+
     return {
       id: task.id,
       title: task.title,
-      description: task.description,
-      status: task.status
-    }
+      completed: task.completed,
+      time: task.createdAt,
+    };
   }
 
-  @Patch(':id')
-  async updateTask(
-    @Param('id') id: string,
-    @Body('title') title: string,
-    @Body('description') description: string,
-  ) {
-    await this.tasksService.updateTask(id, title, description);
+  @Patch('/selectAll')
+  @UsePipes(ValidationPipe)
+  async selectAllTasks(@Body() selectAllTasks: SelectAllTasks) {
+    await this.tasksService.selectAllTasks(selectAllTasks);
+
     return null;
   }
 
-  @Patch(':id/status')
-  async updateTaskStatus(
+  @Patch(':id')
+  @UsePipes(ValidationPipe)
+  async updateTask(
     @Param('id') id: string,
-    @Body('status', TaskStatusValidationPipe) status: TaskStatus
-
+    @Body() updateTaskDto: UpdateTaskDto,
   ) {
-    await this.tasksService.updateTaskStatus(id, status);
+    await this.tasksService.updateTask(id, updateTaskDto);
+
+    return null;
+  }
+
+  @Delete('/completed')
+  async deleteCompletedTasks() {
+    await this.tasksService.deleteCompletedTasks();
     return null;
   }
 
   @Delete(':id')
-  async deleteTask(
-    @Param('id') id: string
-  ) {
+  async deleteTask(@Param('id') id: string) {
     await this.tasksService.deleteTask(id);
+
     return null;
-
   }
-
-
-
-};
+}

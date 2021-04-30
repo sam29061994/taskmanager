@@ -1,23 +1,32 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { TaskDocument, TaskStatus } from "./task.model";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { TaskDocument } from './task.model';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Query } from 'mongoose';
-import { Task } from './task.model';
-import { CreateTaskDTO } from "./dto/create-task.dto";
-import { GetTaskFilterDTO } from "./dto/get-task-filter.dto";
+import { Model } from 'mongoose';
+import { CreateTaskDto } from './dto/create-task.dto';
+import { GetTaskFilterDto } from './dto/get-task-filter.dto';
+import { UpdateTaskDto } from './dto/update-task.dto';
+import { SelectAllTasks } from './dto/select-all-tasks.dto';
 
 @Injectable()
 export class TasksService {
   constructor(
-    @InjectModel('Task') private readonly taskModel: Model<TaskDocument>
-  ) { }
+    @InjectModel('Task') private readonly taskModel: Model<TaskDocument>,
+  ) {}
 
-  async createTask(createTaskDTO: CreateTaskDTO) {
-    const { title, description } = createTaskDTO;
+  async createTask(createTaskDTO: CreateTaskDto) {
+    const { title } = createTaskDTO;
 
-    const newTask = new this.taskModel({ title, description, status: TaskStatus.OPEN })
+    const newTask = new this.taskModel({
+      title,
+      completed: false,
+      createdAt: Date.now().toString(),
+    });
     const result = await newTask.save();
-    return result.id as string;
+    return result;
   }
 
   async getTasks() {
@@ -25,20 +34,26 @@ export class TasksService {
     return tasks as TaskDocument[];
   }
 
-  async getTasksWithFilters(getTaskFilterDTO: GetTaskFilterDTO) {
-    const { status, search } = getTaskFilterDTO;
+  async getTasksWithFilters(getTaskFilterDTO: GetTaskFilterDto) {
+    const { completed, search } = getTaskFilterDTO;
     let tasks = [];
 
+    if (search && completed) {
+      tasks = await this.taskModel.find({
+        title: new RegExp(search),
+        completed: completed,
+      });
+      return tasks;
+    }
+
     if (search) {
-      tasks = await this.taskModel.find({ title: new RegExp(search) })
+      tasks = await this.taskModel.find({ title: new RegExp(search) });
       return tasks;
     }
-    if (status) {
-      tasks = await this.taskModel.find({ status: status });
+    if (completed) {
+      tasks = await this.taskModel.find({ completed: completed });
       return tasks;
     }
-    tasks = await this.taskModel.find({ title: new RegExp(search), status: status })
-    return tasks;
   }
 
   async getTask(id: string) {
@@ -46,18 +61,32 @@ export class TasksService {
     return task;
   }
 
-  async updateTask(id: string, title: string, description: string) {
+  async updateTask(id: string, updateTaskDto: UpdateTaskDto) {
+    const { title, completed } = updateTaskDto;
     const task = await this.findTask(id);
     task.title = title || task.title;
-    task.description = description || task.description;
+    task.completed = completed || task.completed;
+
     await task.save();
+
     return task;
   }
 
-  async updateTaskStatus(id: string, status: TaskStatus) {
+  async selectAllTasks(selectAllTasks: SelectAllTasks) {
+    const { completed } = selectAllTasks;
+    try {
+      await this.taskModel.updateMany({}, { completed });
+    } catch (err) {
+      throw new BadRequestException();
+    }
+  }
+
+  async updateTaskStatus(id: string, completed: boolean) {
     const task = await this.findTask(id);
-    task.status = status;
+    task.completed = completed;
+
     await task.save();
+
     return task;
   }
 
@@ -68,14 +97,15 @@ export class TasksService {
     }
   }
 
-  private async findTask(id: string): Promise<TaskDocument> {
-
-    const task = await this.taskModel.findById(id);
-    if (!task) {
-      throw new NotFoundException(`task not found with id:${id}`)
-    }
-    return task;
-
+  async deleteCompletedTasks() {
+    await this.taskModel.deleteMany({ completed: true }).exec();
   }
 
+  private async findTask(id: string): Promise<TaskDocument> {
+    const task = await this.taskModel.findById(id);
+    if (!task) {
+      throw new NotFoundException(`task not found with id:${id}`);
+    }
+    return task;
+  }
 }

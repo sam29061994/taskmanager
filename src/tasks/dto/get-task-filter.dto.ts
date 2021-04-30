@@ -1,13 +1,10 @@
-import { IsIn, IsNotEmpty, IsOptional } from "class-validator";
-import { TaskStatus } from "../task.model";
-
-export class GetTaskFilterDTO {
+import { IsBoolean, IsNotEmpty, IsOptional } from 'class-validator';
+export class GetTaskFilterDto {
   @IsOptional()
-  @IsIn([TaskStatus.OPEN, TaskStatus.DONE])
-  status:TaskStatus
+  @IsBoolean()
+  completed: boolean;
 
   @IsOptional()
   @IsNotEmpty()
-  search: string
-
+  search: string;
 }
