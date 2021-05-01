@@ -96,15 +96,7 @@ export default defineComponent({
       } else {
         this.completed = false;
       }
-
     }
-  },
-  directives: {
-    focus: {
-      mounted(el) {
-        el.focus();
-      },
-    },
   },
 });
 </script>

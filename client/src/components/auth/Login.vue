@@ -23,6 +23,8 @@
           id="password"
           class="login-input"
           v-model="password"
+          @keyup.enter="login"
+          v-focus
         />
       </div>
 
@@ -37,7 +39,7 @@
 
 <script>
 import { defineComponent } from 'vue';
-import axios from 'axios';
+import axios from '../../modules/api';
 axios.defaults.baseURL = 'http://localhost:3000';
 
 export default defineComponent({
@@ -73,7 +75,7 @@ export default defineComponent({
       localStorage.setItem('access_token', token);
       this.$router.push(this.routeTo);
     },
-  },
+  }
 });
 </script>
 
@@ -105,6 +107,7 @@ label {
   border: 1px solid lightgrey;
 }
 .btn-submit {
+  display: inline-block;
   width: 100%;
   padding: 14px 12px;
   font-size: 18px;

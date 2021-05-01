@@ -8,7 +8,7 @@ import { defineComponent } from 'vue'
 import Login from '@/components/auth/Login';
 
 export default defineComponent({
- name:'landing',
+ name:'signin',
  components:{
    Login,
  }

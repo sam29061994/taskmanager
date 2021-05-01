@@ -6,13 +6,14 @@
       class="input"
       @keyup.enter="addItem"
       v-model="newTodo"
+      v-focus
     />
     <todo-item
       v-for="(todo, index) in filteredItems"
       :key="todo.id"
       :todo="todo"
       :index="index"
-      :selectAll="!itemsLeft && !!todos.length"
+      :selectAll="!itemsLeft &&!!todos.length"
       @removedItem="removeItem"
       @editItemFinished="editItemFinished"
     />
@@ -37,21 +38,24 @@
         <button
           :class="{ active: filterType === 'All' }"
           @click="changeFilterType('All')"
-          >All
+        >
+          All
         </button>
         <button
           :class="{ active: filterType === 'Active' }"
           @click="changeFilterType('Active')"
-          >Active</button
         >
+          Active
+        </button>
         <button
           :class="{ active: filterType === 'Completed' }"
           @click="changeFilterType('Completed')"
-          >Completed</button
         >
-        <button class="remove-completed-button" @click="clearCompletedItems"
-          >Clear Completed</button
-        >
+          Completed
+        </button>
+        <button class="remove-completed-button" @click="clearCompletedItems">
+          Clear Completed
+        </button>
       </div>
     </div>
   </footer>
@@ -62,9 +66,6 @@ import TodoItem from './TodoItem';
 import { defineComponent } from 'vue';
 import axios from 'axios';
 axios.defaults.baseURL = 'http://localhost:3000';
-const token = localStorage.getItem('access_token');
-axios.defaults.headers = {'Authorization': `bearer ${token}`}
-
 
 export default defineComponent({
   name: 'todo-list',
@@ -78,9 +79,16 @@ export default defineComponent({
       newItemId: 0,
       filterType: 'All',
       todos: [],
+      token: null,
     };
   },
   async created() {
+    this.token = localStorage.getItem('access_token');
+
+    if (this.token) {
+      axios.defaults.headers = { Authorization: `bearer ${this.token}` };
+    }
+
     const { data } = await axios.get('/tasks');
     this.todos = data.map((todo) => ({
       ...todo,
@@ -112,7 +120,7 @@ export default defineComponent({
       this.todos.splice(index, 1, todo);
     },
 
-    async checkAllItems() {
+    async checkAllItems(event) {
       await axios.patch(
         `/tasks/selectAll
       `,
@@ -127,20 +135,26 @@ export default defineComponent({
       await axios.delete('tasks/completed');
       this.todos = this.todos.filter((todo) => !todo.completed);
     },
-
-   
   },
   computed: {
     itemsLeft() {
       return this.todos.filter((todo) => !todo.completed).length;
     },
     filteredItems() {
+      console.log('here coming it should come');
       if (this.filterType === 'Active') {
         return this.todos.filter((todo) => todo.completed === false);
       } else if (this.filterType === 'Completed') {
         return this.todos.filter((todo) => todo.completed === true);
       } else {
         return this.todos;
+      }
+    },
+  },
+  watch: {
+    token(val) {
+      if (!val) {
+        this.$router.push({ name: 'Signin' });
       }
     },
   },
@@ -199,7 +213,7 @@ export default defineComponent({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 20px;
+  font-size: 15px;
 
   .select-all-checkbox {
     transform: scale(1.5);
@@ -225,7 +239,7 @@ export default defineComponent({
 
   Button {
     background: transparent;
-    font-size: 20px;
+    font-size: 25px;
     color: #2c3e50;
     border: 0.5px solid #2c3e50;
     border-radius: 3px;
@@ -243,7 +257,8 @@ export default defineComponent({
 }
 
 .logout-btn {
-  width: 50%;
-  margin-top: 50px;
+  width: 30%;
+  position: absolute;
+  right: 0px;
 }
 </style>

@@ -9,7 +9,7 @@ export default defineComponent({
  methods: {
     logout() {
       localStorage.removeItem('access_token');
-      this.$router.push({name:"Landing"})
+      this.$router.push({name:"Signin"})
     }
  }
 })
