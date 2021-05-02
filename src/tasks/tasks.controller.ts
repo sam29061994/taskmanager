@@ -10,14 +10,17 @@ import {
   UsePipes,
   ValidationPipe,
   UseGuards,
+  Logger,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { GetUser } from 'src/auth/get-user.decorator';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { GetTaskFilterDto } from './dto/get-task-filter.dto';
 import { SelectAllTasks } from './dto/select-all-tasks.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskDocument } from './task.model';
 import { TasksService } from './tasks.service';
+import { User } from '../users/user.model';
 
 @Controller('tasks')
 @UseGuards(AuthGuard())
@@ -26,7 +29,15 @@ export class TasksController {
 
   @Post()
   @UsePipes(ValidationPipe)
-  async createTask(@Body() createTaskDTO: CreateTaskDto) {
+  async createTask(
+    @Body() createTaskDTO: CreateTaskDto,
+    @GetUser() user: User,
+  ) {
+    Logger.verbose(
+      `User ${user.username} retrieving all tasks. Data: ${JSON.stringify(
+        createTaskDTO,
+      )}`,
+    );
     const result = await this.tasksService.createTask(createTaskDTO);
     const { _id: id, title, completed, createdAt } = result;
 
@@ -34,13 +45,18 @@ export class TasksController {
   }
 
   @Get()
-  async getTasks(@Query(ValidationPipe) getTaskFilterDTO: GetTaskFilterDto) {
+  async getTasks(
+    @Query(ValidationPipe) getTaskFilterDTO: GetTaskFilterDto,
+    @GetUser() user: User,
+  ) {
     let tasks: TaskDocument[] = [];
     if (Object.keys(getTaskFilterDTO).length > 0) {
       tasks = await this.tasksService.getTasksWithFilters(getTaskFilterDTO);
     } else {
       tasks = await this.tasksService.getTasks();
     }
+
+    Logger.verbose(`User ${user.username} retrieving all tasks`);
 
     return tasks.map(({ id, title, completed, createdAt }) => ({
       id,

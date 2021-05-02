@@ -1,6 +1,7 @@
 import {
-  BadRequestException,
   Injectable,
+  InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { TaskDocument } from './task.model';
@@ -25,13 +26,29 @@ export class TasksService {
       completed: false,
       createdAt: Date.now().toString(),
     });
-    const result = await newTask.save();
-    return result;
+    try {
+      const result = await newTask.save();
+      return result;
+    } catch (error) {
+      Logger.error(
+        `Failed to create a task 
+        }. CreateTaskDTO:${JSON.stringify(createTaskDTO)} `,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        `Failed to create task for the user`,
+      );
+    }
   }
 
   async getTasks() {
-    const tasks = await this.taskModel.find().exec();
-    return tasks as TaskDocument[];
+    try {
+      const tasks = await this.taskModel.find().exec();
+      return tasks as TaskDocument[];
+    } catch (error) {
+      Logger.error(`Failed to retrieve the tasks  `, error.stack);
+      throw new NotFoundException(`Failed to retrieve task for the user`);
+    }
   }
 
   async getTasksWithFilters(getTaskFilterDTO: GetTaskFilterDto) {
@@ -57,8 +74,13 @@ export class TasksService {
   }
 
   async getTask(id: string) {
-    const task = await this.findTask(id);
-    return task;
+    try {
+      const task = await this.findTask(id);
+      return task;
+    } catch (error) {
+      Logger.error(`Failed to retrieve a task `, error.stack);
+      throw new NotFoundException(`Failed to retrieve task for the user`);
+    }
   }
 
   async updateTask(id: string, updateTaskDto: UpdateTaskDto) {
@@ -66,28 +88,42 @@ export class TasksService {
     const task = await this.findTask(id);
     task.title = title || task.title;
     task.completed = completed || task.completed;
+    try {
+      await task.save();
 
-    await task.save();
-
-    return task;
+      return task;
+    } catch (error) {
+      Logger.error(`Failed to update the task with id ${id} `, error.stack);
+      throw new InternalServerErrorException(
+        `Failed to create task for the user`,
+      );
+    }
   }
 
   async selectAllTasks(selectAllTasks: SelectAllTasks) {
     const { completed } = selectAllTasks;
     try {
       await this.taskModel.updateMany({}, { completed });
-    } catch (err) {
-      throw new BadRequestException();
+    } catch (error) {
+      Logger.error(`Failed to update all the tasks status `, error.stack);
+      throw new InternalServerErrorException(
+        `Failed to update all the tasks status`,
+      );
     }
   }
 
   async updateTaskStatus(id: string, completed: boolean) {
     const task = await this.findTask(id);
     task.completed = completed;
-
-    await task.save();
-
-    return task;
+    try {
+      await task.save();
+      return task;
+    } catch (error) {
+      Logger.error(`Failed to update the task with id ${id} `, error.stack);
+      throw new InternalServerErrorException(
+        `Failed to create task for the user`,
+      );
+    }
   }
 
   async deleteTask(id: string) {
